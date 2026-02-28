@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VHToken TCG Gacha</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rajdhani:wght@500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/animations/scale.css" />
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="stars"></div>
+    <div class="stars2"></div>
+    <div class="stars3"></div>
+
+    <div id="loadingOverlay">
+        <div class="loader-wrapper">
+            <div class="packman"></div>
+            <div class="dots">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+        </div>
+        <div class="loading-text" id="loaderText">Processing...</div>
+    </div>
+
+    <div class="app-layout">
+
+        <nav class="sidebar">
+            <div class="logo-area">
+                <h2>VH<br>GACHA</h2>
+            </div>
+            <div class="menu-item active" onclick="switchTab('gacha')" id="menu-gacha">
+                <i class="fas fa-gamepad"></i> Gacha
+            </div>
+            <div class="menu-item" onclick="switchTab('inventory')" id="menu-inventory">
+                <i class="fas fa-box-open"></i> Inventory
+            </div>
+            <div class="menu-item" onclick="switchTab('battle')" id="menu-battle">
+                <i class="fas fa-khanda"></i> Battle Mode
+            </div>
+            <div class="menu-item" onclick="switchTab('history')" id="menu-history">
+                <i class="fas fa-history"></i> History
+            </div>
+
+            <div class="volume-controls"
+                style="padding: 15px; margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
+                <div style="font-size: 0.6rem; color: #888; margin-bottom: 5px;"><i class="fas fa-volume-up"></i> VOLUME
+                </div>
+                <input type="range" min="0" max="1" step="0.1" value="0.5" oninput="changeVolume('sfx', this.value)"
+                    style="width: 100%; accent-color: #EFF107;">
+            </div>
+            <div class="wallet-info" id="walletStatusSidebar" title="Wallet Connection Status">
+                <i class="fas fa-wallet"></i> <br>
+                <span style="color: #666; font-size: 0.8em;">Not Connected</span>
+            </div>
+        </nav>
+
+        <main class="main-content">
+
+            <div id="view-gacha" class="content-section active">
+                <h2 class="page-title"><i class="fas fa-dice"></i> SUMMON</h2>
+                <div class="container-box">
+                    <p style="color: #ccc; margin-bottom: 10px;">PRICE: <span
+                            style="color: #EFF107; font-weight: bold; font-size: 1.2em;">100 VH</span></p>
+                    <p id="spinWarningText"
+                        style="font-size: 0.85rem; margin-bottom: 20px; min-height: 1.2em; font-family: 'Rajdhani', sans-serif;">
+                    </p>
+                    <div class="btn-group">
+                        <button id="btnConnect" class="btn-connect" onclick="connectWallet()"
+                            title="Connect MetaMask Wallet"><i class="fas fa-link"></i>
+                            Connect</button>
+                        <button id="btnApprove" class="btn-approve" onclick="approveToken()"
+                            title="Approve VH Token Usage"><i class="fas fa-unlock"></i>
+                            Approve</button>
+                    </div>
+                    <div class="quick-inventory-summary">
+                        <div class="summary-item">
+                            <span class="label">My Collection:</span>
+                            <span id="quickTotalCards" class="value">0</span>
+                            <span class="unit">Cards</span>
+                        </div>
+                        <div class="summary-rarities">
+                            <div class="rarity-badge common" title="Common Cards Owned"><span id="quickCommon">0</span>
+                            </div>
+                            <div class="rarity-badge rare" title="Rare Cards Owned"><span id="quickRare">0</span></div>
+                            <div class="rarity-badge legend" title="Legendary Cards Owned"><span
+                                    id="quickLegend">0</span></div>
+                        </div>
+                    </div>
+                    <hr style="border-color: rgba(255,255,255,0.1); width: 50%; margin: 20px auto;">
+                    <button id="btnSpin" class="btn-spin" onclick="spinGacha()" title="Spend 100 VH to Summon!">SPIN
+                        NOW!</button>
+                </div>
+            </div>
+
+            <div id="view-inventory" class="content-section">
+                <h2 class="page-title"><i class="fas fa-boxes"></i> MY COLLECTION</h2>
+                <div class="collection-header">
+                    <div class="progress-stats">
+                        <div class="stat-item">
+                            <span>TOTAL COMPLETION</span>
+                            <span id="totalPercent">0%</span>
+                        </div>
+                        <div class="progress-container-main">
+                            <div id="totalProgressBar" class="progress-fill"></div>
+                        </div>
+                    </div>
+                    <div
+                        style="flex: 1; min-width: 250px; display: flex; justify-content: center; align-items: center;">
+                        <div id="inventoryChart" style="width: 100%; max-width: 300px;"></div>
+                    </div>
+                </div>
+                <div class="filter-bar">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="cardSearchInput" placeholder="Search by ID..."
+                            oninput="handleFilterAndSort()" title="Type Card ID to search">
+                    </div>
+                    <div class="filter-options">
+                        <div class="filter-btn active" onclick="filterCards('All', this)" title="Show All Cards">All
+                        </div>
+                        <div class="filter-btn" onclick="filterCards('Common', this)" title="Show Common Only">Common
+                        </div>
+                        <div class="filter-btn" onclick="filterCards('Rare', this)" title="Show Rare Only">Rare</div>
+                        <div class="filter-btn" onclick="filterCards('Legend', this)" title="Show Legend Only">Legend
+                        </div>
+                    </div>
+                    <select id="sortSelect" class="sort-dropdown" onchange="handleFilterAndSort()"
+                        title="Change Sort Order">
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="rarity-desc">Rarity (High-Low)</option>
+                        <option value="rarity-asc">Rarity (Low-High)</option>
+                    </select>
+                </div>
+                <div id="cardList" class="card-grid">
+                    <p style="color: #666; margin-top: 50px;">Connect wallet to see your cards...</p>
+                </div>
+            </div>
+
+            <div id="view-battle" class="content-section">
+                <div class="battle-header">
+                    <h2 class="page-title"><i class="fas fa-gamepad"></i> BATTLE ARENA</h2>
+                    <p class="battle-subtitle">A wild <span class="highlight">AI BOSS</span> appeared!</p>
+                </div>
+
+                <div class="battle-container pokemon-theme">
+                    <div class="battle-screen">
+                        <div class="poke-status boss-status">
+                            <div class="status-header">
+                                <span class="poke-name">AI BOSS</span>
+                                <span class="poke-level">Lv.99</span>
+                            </div>
+                            <div class="hp-bar-container">
+                                <span class="hp-label">PWR</span>
+                                <div class="hp-bar-bg">
+                                    <div class="hp-fill hp-boss"></div>
+                                </div>
+                            </div>
+                            <div class="power-numbers"><span id="bossTotalPower">???</span> / ???</div>
+                        </div>
+
+                        <div class="poke-sprite boss-sprite-area">
+                            <div class="ground-shadow boss-shadow"></div>
+                            <img src="https://robohash.org/boss?set=set2" alt="Boss" class="boss-avatar floating">
+                        </div>
+
+                        <div class="poke-sprite player-sprite-area">
+                            <div class="ground-shadow player-shadow"></div>
+                            <div id="selectedCardsForBattle" class="player-deck-sprite">
+                                <div class="empty-state">
+                                    <p>ยังไม่ได้จัดทีม</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="poke-status player-status">
+                            <div class="status-header">
+                                <span class="poke-name">YOUR DECK</span>
+                                <span class="poke-level">Lv.50</span>
+                            </div>
+                            <div class="hp-bar-container">
+                                <span class="hp-label">PWR</span>
+                                <div class="hp-bar-bg">
+                                    <div class="hp-fill hp-player"></div>
+                                </div>
+                            </div>
+                            <div class="power-numbers"><span id="playerTotalPower">0</span> / MAX</div>
+                        </div>
+                    </div>
+
+                    <div class="battle-bottom-ui">
+                        <div class="poke-dialog-box">
+                            <div id="battleLog" class="dialog-text">
+                                What will YOUR DECK do?<br>
+                                Waiting for Challenger...
+                            </div>
+                        </div>
+
+                        <div class="poke-action-menu">
+                            <button class="btn-poke-fight" onclick="startBattle()">
+                                <i class="fas fa-khanda"></i> FIGHT
+                            </button>
+                            <button class="btn-poke-run" onclick="closeBattle()">
+                                <i class="fas fa-person-running"></i> RUN
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-history" class="content-section">
+                <h2 class="page-title"><i class="fas fa-clock-rotate-left"></i> RECENT ACTIVITY</h2>
+                <div class="container-box" style="max-width: 800px; margin: 0 auto; background: rgba(0,0,0,0.3);">
+                    <div id="historyList" class="history-list">
+                        <p style="color: #666; text-align: center; padding: 20px;">No recent activity found.</p>
+                    </div>
+                    <button class="btn-cancel" onclick="clearHistory()"
+                        style="margin-top: 20px; font-size: 0.7em; opacity: 0.6;" title="Clear Local History Logs">
+                        <i class="fas fa-trash"></i> Clear Local History
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="burnModal" class="modal-overlay">
+        <div class="modal-box">
+            <h2 style="color: #ef4444;">🔥 BURN WARNING</h2>
+            <p>Are you sure you want to burn Card <span id="burnCardId" style="color: #EFF107;">#0</span>?</p>
+            <p style="font-size: 0.8rem; color: #ccc;">You will receive <span style="color: #4ade80;">10 VH</span> back.
+            </p>
+            <p style="font-size: 0.7rem; color: #666; margin-top: 10px;">(This action cannot be undone)</p>
+            <div class="btn-group">
+                <button class="btn-cancel" onclick="closeBurnModal()">Cancel</button>
+                <button class="btn-confirm-burn" onclick="executeBurn()">🔥 YES, BURN IT</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="cardPreviewModal" class="modal-overlay" onclick="closePreviewModal()">
+        <div class="preview-container" onclick="event.stopPropagation()">
+            <span class="close-preview" onclick="closePreviewModal()">&times;</span>
+            <img id="previewImage" src="" alt="Card Preview">
+            <div id="previewInfo" class="preview-info"></div>
+        </div>
+    </div>
+
+    <div id="gachaRevealOverlay" class="reveal-overlay">
+        <div class="reveal-content">
+            <div class="reveal-light"></div>
+            <h2 id="revealRarityText">NEW SUMMON!</h2>
+            <div id="revealCardContainer"></div>
+            <div class="reveal-details">
+                <div class="detail-row">
+                    <span class="label">TOKEN ID:</span>
+                    <span id="revealTokenId" class="value">#000000</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">ACQUIRED AT:</span>
+                    <span id="revealTime" class="value">00/00/00, 00:00</span>
+                </div>
+            </div>
+            <div class="reveal-actions">
+                <button class="btn-secondary" onclick="closeReveal()" title="Close and go to Inventory">VIEW
+                    INVENTORY</button>
+                <button class="btn-confirm-reveal" onclick="spinAgain()" title="Spin again immediately">SPIN
+                    AGAIN</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="ticker-wrap">
+        <div class="ticker">
+            <div class="ticker-item">WELCOME TO VHTOKEN GACHA</div>
+            <div class="ticker-item">|||</div>
+            <div class="ticker-item" style="color: #EFF107;">LEGENDARY DROP RATE: UP!</div>
+            <div class="ticker-item">|||</div>
+            <div class="ticker-item">INSERT COIN TO START</div>
+            <div class="ticker-item">|||</div>
+            <div class="ticker-item">GOOD LUCK</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import autoAnimate from 'https://cdn.jsdelivr.net/npm/@formkit/auto-animate/index.min.js';
+        const grid = document.getElementById('cardList');
+        if (grid) {
+            autoAnimate(grid, {
+                duration: 250,
+                easing: 'ease-in-out'
+            });
+        }
+    </script>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
